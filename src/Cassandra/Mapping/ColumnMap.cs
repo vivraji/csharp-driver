@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Reflection;
 
 namespace Cassandra.Mapping
 {
     /// <summary>
     /// A class for defining how a property or field on a POCO is mapped to a column via a fluent-style interface.
     /// </summary>
-    public class ColumnMap : IColumnDefinition
+    public class ColumnMap
     {
-        private readonly MemberInfo _memberInfo;
-        private readonly Type _memberInfoType;
         private string _columnName;
         private Type _columnType;
         private bool _ignore;
@@ -17,62 +14,29 @@ namespace Cassandra.Mapping
         private bool _secondaryIndex;
         private bool _isCounter;
         private bool _isStatic;
-
-        MemberInfo IColumnDefinition.MemberInfo
-        {
-            get { return _memberInfo; }
-        }
-
-        Type IColumnDefinition.MemberInfoType
-        {
-            get { return _memberInfoType; }
-        }
-
-        string IColumnDefinition.ColumnName
-        {
-            get { return _columnName; }
-        }
-
-        Type IColumnDefinition.ColumnType
-        {
-            get { return _columnType; }
-        }
-
-        bool IColumnDefinition.Ignore
-        {
-            get { return _ignore; }
-        }
-
-        bool IColumnDefinition.IsExplicitlyDefined
-        {
-            get { return _isExplicitlyDefined; }
-        }
-
-        bool IColumnDefinition.SecondaryIndex
-        {
-            get { return _secondaryIndex; }
-        }
-
-        bool IColumnDefinition.IsCounter
-        {
-            get { return _isCounter; }
-        }
-
-        bool IColumnDefinition.IsStatic
-        {
-            get { return _isStatic; }
-        }
-
+        
         /// <summary>
         /// Creates a new ColumnMap for the property/field specified by the MemberInfo.
         /// </summary>
-        public ColumnMap(MemberInfo memberInfo, Type memberInfoType, bool isExplicitlyDefined)
+        public ColumnMap(bool isExplicitlyDefined)
         {
-            if (memberInfo == null) throw new ArgumentNullException("memberInfo");
-            if (memberInfoType == null) throw new ArgumentNullException("memberInfoType");
-            _memberInfo = memberInfo;
-            _memberInfoType = memberInfoType;
             _isExplicitlyDefined = isExplicitlyDefined;
+        }
+
+        internal void ApplyTo(IColumnMappingConfig columnConfig)
+        {
+            // Override values on the column's config with our values
+            if (_columnName != null)
+                columnConfig.ColumnName = _columnName;
+
+            if (_columnType != null)
+                columnConfig.ColumnType = _columnType;
+
+            columnConfig.Ignore = _ignore;
+            columnConfig.IsCounter = _isCounter;
+            columnConfig.IsExplicitlyDefined = _isExplicitlyDefined;
+            columnConfig.IsStatic = _isStatic;
+            columnConfig.SecondaryIndex = _secondaryIndex;
         }
 
         /// <summary>

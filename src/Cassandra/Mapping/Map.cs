@@ -10,7 +10,7 @@ namespace Cassandra.Mapping
     /// A class for defining how to map a POCO via a fluent-style interface.  The mapping for Type T should be defined in the
     /// constructor of the sub class.
     /// </summary>
-    public class Map<TPoco> : ITypeDefinition
+    public class Map<TPoco> : ITableMapping
     {
         private readonly Type _pocoType;
         private readonly Dictionary<string, ColumnMap> _columnMaps;
@@ -26,77 +26,11 @@ namespace Cassandra.Mapping
         private bool _compactStorage;
         private string _keyspaceName;
 
-        Type ITypeDefinition.PocoType
+        Type ITableMapping.PocoType
         {
             get { return _pocoType; }
         }
-
-        string ITypeDefinition.TableName
-        {
-            get { return _tableName; }
-        }
-
-        string ITypeDefinition.KeyspaceName
-        {
-            get { return _keyspaceName; }
-        }
-
-        bool ITypeDefinition.ExplicitColumns
-        {
-            get { return _explicitColumns; }
-        }
-
-        bool ITypeDefinition.CaseSensitive
-        {
-            get { return _caseSensitive; }
-        }
-
-        bool ITypeDefinition.AllowFiltering
-        {
-            get { return false; }
-        }
-
-        bool ITypeDefinition.CompactStorage
-        {
-            get { return _compactStorage; }
-        }
-
-        string[] ITypeDefinition.PartitionKeys
-        {
-            get
-            {
-                // Use string column names if configured
-                if (_partitionKeyColumns != null)
-                    return _partitionKeyColumns;
-
-                // If no MemberInfos available either, just bail
-                if (_partitionKeyColumnMembers == null) 
-                    return null;
-
-                // Get the column names from the members
-                var columnNames = new string[_partitionKeyColumnMembers.Length];
-                for (var index = 0; index < _partitionKeyColumnMembers.Length; index++)
-                {
-                    var memberInfo = _partitionKeyColumnMembers[index];
-                    columnNames[index] = GetColumnName(memberInfo);
-                }
-
-                return columnNames;
-            }
-        }
-
-        Tuple<string, SortOrder>[] ITypeDefinition.ClusteringKeys
-        {
-            get
-            {
-                //Need to concat the clustering keys by name
-                //Plus the one defined by member
-                return _clusteringKeyColumns
-                    .Concat(_clusteringKeyColumnMembers.Select(i => Tuple.Create(GetColumnName(i.Item1), i.Item2)))
-                    .ToArray();
-            }
-        }
-
+        
         /// <summary>
         /// Creates a new fluent mapping definition for POCOs of Type TPoco.
         /// </summary>
@@ -104,6 +38,78 @@ namespace Cassandra.Mapping
         {
             _pocoType = typeof (TPoco);
             _columnMaps = new Dictionary<string, ColumnMap>();
+        }
+
+        void ITableMapping.ApplyTo(ITableMappingConfig tableConfig)
+        {
+            if (_tableName != null)
+                tableConfig.TableName = _tableName;
+
+            // Override properties on config with values set via the public API of the class
+            tableConfig.KeyspaceName = _keyspaceName;
+            tableConfig.ExplicitColumns = _explicitColumns;
+            tableConfig.CompactStorage = _compactStorage;
+            tableConfig.CaseSensitive = _caseSensitive;
+
+            // Apply any column configuration before figuring out the partition/clustering keys since column configuration
+            // could change the column names
+            var columnConfigsByMemberInfo = new Dictionary<MemberInfo, IColumnMappingConfig>();
+            foreach (IColumnMappingConfig columnConfig in tableConfig.Columns)
+            {
+                ColumnMap columnMap;
+                if (_columnMaps.TryGetValue(columnConfig.MemberInfo.Name, out columnMap) == false)
+                    columnMap = new ColumnMap(false);
+
+                columnMap.ApplyTo(columnConfig);
+
+                // Add each column config to dictionary so partition and clustering key config can possibly use it below
+                columnConfigsByMemberInfo[columnConfig.MemberInfo] = columnConfig;
+            }
+
+            // Apply parition and clustering key settings
+            IList<string> partitionKeys = GetPartitionKeys(columnConfigsByMemberInfo);
+            if (partitionKeys != null)
+                tableConfig.PartitionKeys = partitionKeys;
+
+            IList<Tuple<string, SortOrder>> clusteringKeys = GetClusteringKeys(columnConfigsByMemberInfo);
+            if (clusteringKeys != null)
+                tableConfig.ClusteringKeys = clusteringKeys;
+        }
+
+        private IList<string> GetPartitionKeys(Dictionary<MemberInfo, IColumnMappingConfig> columnConfigsByMemberInfo)
+        {
+            // Use string column names if configured
+            if (_partitionKeyColumns != null)
+            {
+                return _partitionKeyColumns;
+            }
+
+            // If no MemberInfos available either, just bail
+            if (_partitionKeyColumnMembers == null)
+            {
+                return null;
+            }
+
+            // Get the column names from the members
+            var columnNames = new string[_partitionKeyColumnMembers.Length];
+            for (var index = 0; index < _partitionKeyColumnMembers.Length; index++)
+            {
+                MemberInfo memberInfo = _partitionKeyColumnMembers[index];
+                columnNames[index] = columnConfigsByMemberInfo[memberInfo].ColumnName;
+            }
+
+            return columnNames;
+        }
+
+        private IList<Tuple<string, SortOrder>> GetClusteringKeys(Dictionary<MemberInfo, IColumnMappingConfig> columnConfigsByMemberInfo)
+        {
+            //Need to concat the clustering keys by name
+            //Plus the one defined by member
+            return _clusteringKeyColumns.Concat(_clusteringKeyColumnMembers.Select(i =>
+            {
+                string columnName = columnConfigsByMemberInfo[i.Item1].ColumnName;
+                return Tuple.Create(columnName, i.Item2);
+            })).ToArray();
         }
 
         /// <summary>
@@ -136,7 +142,7 @@ namespace Cassandra.Mapping
         {
             if (columns == null) throw new ArgumentNullException("columns");
             if (columns.Length == 0) throw new ArgumentOutOfRangeException("columns", "Must specify at least one partition key column.");
-            if (_partitionKeyColumns != null) throw new InvalidOperationException("Partition key column names were already specified, define multiple using invoking this method with multiple expressions.");
+            if (_partitionKeyColumns != null) throw new InvalidOperationException("Partition key column names were already specified, define multiple by invoking this method with multiple expressions.");
 
             // Validate we got property/field expressions
             var partitionKeyMemberInfo = new MemberInfo[columns.Length];
@@ -231,11 +237,7 @@ namespace Cassandra.Mapping
             ColumnMap columnMap;
             if (_columnMaps.TryGetValue(memberInfo.Name, out columnMap) == false)
             {
-                Type memberInfoType = memberInfo as PropertyInfo != null
-                                          ? ((PropertyInfo) memberInfo).PropertyType
-                                          : ((FieldInfo) memberInfo).FieldType;
-
-                columnMap = new ColumnMap(memberInfo, memberInfoType, true);
+                columnMap = new ColumnMap(true);
                 _columnMaps[memberInfo.Name] = columnMap;
             }
 
@@ -270,30 +272,6 @@ namespace Cassandra.Mapping
         public Map<TPoco> Column<TProp>(Expression<Func<TPoco, TProp>> column)
         {
             return Column(column, _ => { });
-        }
-
-        IColumnDefinition ITypeDefinition.GetColumnDefinition(FieldInfo field)
-        {
-            // If a column map has been defined, return it, otherwise create an empty one
-            ColumnMap columnMap;
-            return _columnMaps.TryGetValue(field.Name, out columnMap) ? columnMap : new ColumnMap(field, field.FieldType, false);
-        }
-
-        IColumnDefinition ITypeDefinition.GetColumnDefinition(PropertyInfo property)
-        {
-            // If a column map has been defined, return it, otherwise create an empty one
-            ColumnMap columnMap;
-            return _columnMaps.TryGetValue(property.Name, out columnMap) ? columnMap : new ColumnMap(property, property.PropertyType, false);
-        }
-
-        private string GetColumnName(MemberInfo memberInfo)
-        {
-            ColumnMap columnMap;
-            if (_columnMaps.TryGetValue(memberInfo.Name, out columnMap))
-            {
-                return ((IColumnDefinition)columnMap).ColumnName ?? memberInfo.Name;
-            }
-            return memberInfo.Name;
         }
 
         /// <summary>

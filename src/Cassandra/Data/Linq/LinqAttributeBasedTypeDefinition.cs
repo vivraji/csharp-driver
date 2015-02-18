@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using Cassandra.Mapping;
 
 namespace Cassandra.Data.Linq
@@ -12,18 +11,12 @@ namespace Cassandra.Data.Linq
     /// It uses Linq default backward-compatible settings (like case sensitivity)
     /// </summary>
     [Obsolete]
-    internal class LinqAttributeBasedTypeDefinition : ITypeDefinition
+    internal class LinqAttributeBasedTypeDefinition : ITableMapping
     {
-        private const BindingFlags PublicInstanceBindingFlags = BindingFlags.Public | BindingFlags.Instance;
+        private readonly string _tableName;
+        private readonly string _keyspaceName;
+
         public Type PocoType { get; private set; }
-        public string TableName { get; private set; }
-        public string KeyspaceName { get; private set; }
-        public bool ExplicitColumns { get; private set; }
-        public string[] PartitionKeys { get; private set; }
-        public Tuple<string, SortOrder>[] ClusteringKeys { get; private set; }
-        public bool CaseSensitive { get; private set; }
-        public bool CompactStorage { get; private set; }
-        public bool AllowFiltering { get; private set; }
 
         public LinqAttributeBasedTypeDefinition(Type type, string tableName, string keyspaceName)
         {
@@ -32,72 +25,93 @@ namespace Cassandra.Data.Linq
                 throw new ArgumentNullException("type");
             }
             PocoType = type;
-            CaseSensitive = true;
-            ExplicitColumns = false;
-            TableName = tableName;
-            KeyspaceName = keyspaceName;
-
-            //Fields and properties that can be mapped
-            var mappable = type
-                .GetFields(PublicInstanceBindingFlags)
-                .Where(field => field.IsInitOnly == false)
-                .Select(field => (MemberInfo) field)
-                .Concat(type.GetProperties(PublicInstanceBindingFlags).Where(p => p.CanWrite));
-            var partitionKeys = new List<Tuple<string, int>>();
-            var clusteringKeys = new List<Tuple<string, SortOrder, int>>();
-            foreach (var member in mappable)
-            {
-                var columnName = member.Name;
-                var columnAttribute = (ColumnAttribute) member.GetCustomAttributes(typeof (ColumnAttribute), true).FirstOrDefault();
-                if (columnAttribute != null)
-                {
-                    columnName = columnAttribute.Name;
-                }
-                var partitionKeyAttribute = (PartitionKeyAttribute)member.GetCustomAttributes(typeof(PartitionKeyAttribute), true).FirstOrDefault();
-                if (partitionKeyAttribute != null)
-                {
-                    partitionKeys.Add(Tuple.Create(columnName, partitionKeyAttribute.Index));
-                    continue;
-                }
-                var clusteringKeyAttribute = (ClusteringKeyAttribute)member.GetCustomAttributes(typeof(ClusteringKeyAttribute), true).FirstOrDefault();
-                if (clusteringKeyAttribute != null)
-                {
-                    clusteringKeys.Add(Tuple.Create(columnName, clusteringKeyAttribute.ClusteringSortOrder, clusteringKeyAttribute.Index));
-                }
-            }
-
-            PartitionKeys = partitionKeys
-                //Order the partition keys by index
-                .OrderBy(k => k.Item2)
-                .Select(k => k.Item1).ToArray();
-
-            ClusteringKeys = clusteringKeys.
-                OrderBy(k => k.Item3)
-                .Select(k => Tuple.Create(k.Item1, k.Item2))
-                .ToArray();
-
-            //Get the table name from the attribute or the type name
-            if (TableName == null)
-            {
-                TableName = type.Name;
-                var tableAttribute = (TableAttribute)type.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault();
-                if (tableAttribute != null)
-                {
-                    TableName = tableAttribute.Name;
-                    CaseSensitive = tableAttribute.CaseSensitive;
-                }
-            }
-            if (type.GetCustomAttributes(typeof(CompactStorageAttribute), true).FirstOrDefault() != null)
-            {
-                CompactStorage = true;
-            }
-            if (type.GetCustomAttributes(typeof(AllowFilteringAttribute), true).FirstOrDefault() != null)
-            {
-                AllowFiltering = true;
-            }
+            _tableName = tableName;
+            _keyspaceName = keyspaceName;
         }
 
-        internal static ITypeDefinition DetermineAttributes(Type type)
+        public void ApplyTo(ITableMappingConfig tableConfig)
+        {
+            // Some legacy LINQ defaults
+            tableConfig.CaseSensitive = true;
+            tableConfig.ExplicitColumns = false;
+            tableConfig.KeyspaceName = _keyspaceName;
+
+            if (_tableName != null)
+            {
+                tableConfig.TableName = _tableName;
+            }
+            else
+            {
+                var tableAttribute = (TableAttribute) PocoType.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault();
+                if (tableAttribute != null)
+                {
+                    if (tableAttribute.Name != null)
+                        tableConfig.TableName = tableAttribute.Name;
+
+                    tableConfig.CaseSensitive = tableAttribute.CaseSensitive;
+                }
+            }
+                
+            if (PocoType.GetCustomAttributes(typeof(CompactStorageAttribute), true).FirstOrDefault() != null)
+            {
+                tableConfig.CompactStorage = true;
+            }
+
+            if (PocoType.GetCustomAttributes(typeof(AllowFilteringAttribute), true).FirstOrDefault() != null)
+            {
+                tableConfig.AllowFiltering = true;
+            }
+
+            var partitionKeys = new List<Tuple<string, int>>();
+            var clusteringKeys = new List<Tuple<string, SortOrder, int>>();
+
+            // Apply column mapping configurations before getting partition/clustering keys since those could affect column names
+            foreach (IColumnMappingConfig columnConfig in tableConfig.Columns)
+            {
+                MemberInfo memberInfo = columnConfig.MemberInfo;
+
+                var columnAttribute = (ColumnAttribute) memberInfo.GetCustomAttributes(typeof(ColumnAttribute), true).FirstOrDefault();
+                if (columnAttribute != null)
+                {
+                    columnConfig.IsExplicitlyDefined = true;
+
+                    if (columnAttribute.Name != null)
+                        columnConfig.ColumnName = columnAttribute.Name;
+                }
+
+                columnConfig.SecondaryIndex = HasAttribute(memberInfo, typeof(SecondaryIndexAttribute));
+                columnConfig.IsCounter = HasAttribute(memberInfo, typeof(CounterAttribute));
+                columnConfig.IsStatic = HasAttribute(memberInfo, typeof(StaticColumnAttribute));
+                columnConfig.Ignore = HasAttribute(memberInfo, typeof(IgnoreAttribute));
+
+                var partitionKeyAttribute = (PartitionKeyAttribute) memberInfo.GetCustomAttributes(typeof(PartitionKeyAttribute), true).FirstOrDefault();
+                if (partitionKeyAttribute != null)
+                {
+                    partitionKeys.Add(Tuple.Create(columnConfig.ColumnName, partitionKeyAttribute.Index));
+                    continue;
+                }
+
+                var clusteringKeyAttribute = (ClusteringKeyAttribute) memberInfo.GetCustomAttributes(typeof(ClusteringKeyAttribute), true).FirstOrDefault();
+                if (clusteringKeyAttribute != null)
+                {
+                    clusteringKeys.Add(Tuple.Create(columnConfig.ColumnName, clusteringKeyAttribute.ClusteringSortOrder, clusteringKeyAttribute.Index));
+                }
+            }
+
+            // Order partition keys and clustering keys by index
+            tableConfig.PartitionKeys = partitionKeys.OrderBy(k => k.Item2).Select(k => k.Item1).ToArray();
+            tableConfig.ClusteringKeys = clusteringKeys.OrderBy(k => k.Item3).Select(k => Tuple.Create(k.Item1, k.Item2)).ToArray();
+        }
+
+        /// <summary>
+        /// Determines if the member has an attribute applied
+        /// </summary>
+        private static bool HasAttribute(MemberInfo memberInfo, Type attributeType)
+        {
+            return memberInfo.GetCustomAttributes(attributeType, true).FirstOrDefault() != null;
+        }
+
+        internal static ITableMapping DetermineAttributes(Type type)
         {
             if (type.GetCustomAttributes(typeof(Cassandra.Data.Linq.TableAttribute), true).Length > 0)
             {
@@ -105,16 +119,6 @@ namespace Cassandra.Data.Linq
             }
             //Use the default mapping attributes
             return new Cassandra.Mapping.Attributes.AttributeBasedTypeDefinition(type);
-        }
-
-        public IColumnDefinition GetColumnDefinition(FieldInfo field)
-        {
-            return new LinqAttributeBasedColumnDefinition(field);
-        }
-
-        public IColumnDefinition GetColumnDefinition(PropertyInfo property)
-        {
-            return new LinqAttributeBasedColumnDefinition(property);
         }
     }
 }
