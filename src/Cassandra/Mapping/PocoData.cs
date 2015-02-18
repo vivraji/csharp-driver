@@ -13,6 +13,7 @@ namespace Cassandra.Mapping
     {
         private readonly Dictionary<string, PocoColumn> _columnsByMemberName;
         private readonly HashSet<string> _primaryKeys;
+
         /// <summary>
         /// The .NET Type of the POCO this data is for.
         /// </summary>
@@ -62,7 +63,7 @@ namespace Cassandra.Mapping
         public List<string> MissingPrimaryKeyColumns { get; private set; }
 
         public PocoData(Type pocoType, string tableName, string keyspaceName, LookupKeyedCollection<string, PocoColumn> columns,
-                        string[] partitionkeys, Tuple<string, SortOrder>[] clusteringKeys, bool caseSensitive, bool compact, bool allowFiltering)
+                        IList<string> partitionkeys, IList<Tuple<string, SortOrder>> clusteringKeys, bool caseSensitive, bool compact, bool allowFiltering)
         {
             if (pocoType == null) throw new ArgumentNullException("pocoType");
             if (tableName == null) throw new ArgumentNullException("tableName");
@@ -82,11 +83,11 @@ namespace Cassandra.Mapping
             _primaryKeys = new HashSet<string>(PartitionKeys.Select(p => p.ColumnName).Concat(ClusteringKeys.Select(c => c.Item1.ColumnName)));
 
             MissingPrimaryKeyColumns = new List<string>();
-            if (PartitionKeys.Count != partitionkeys.Length)
+            if (PartitionKeys.Count != partitionkeys.Count)
             {
                 MissingPrimaryKeyColumns.AddRange(partitionkeys.Where(k => !columns.Contains(k)));
             }
-            if (ClusteringKeys.Count != clusteringKeys.Length)
+            if (ClusteringKeys.Count != clusteringKeys.Count)
             {
                 MissingPrimaryKeyColumns.AddRange(partitionkeys.Where(k => !columns.Contains(k)));
             }

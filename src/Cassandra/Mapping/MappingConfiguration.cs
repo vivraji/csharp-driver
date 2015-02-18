@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Cassandra.Mapping.Statements;
 using Cassandra.Mapping.TypeConversion;
 using Cassandra.Mapping.Utils;
@@ -17,8 +15,8 @@ namespace Cassandra.Mapping
         /// </summary>
         private static readonly MappingConfiguration GlobalInstance = new MappingConfiguration();
         private TypeConverter _typeConverter;
-        private LookupKeyedCollection<Type, ITypeDefinition> _typeDefinitions;
-
+        private LookupKeyedCollection<Type, ITableMapping> _tableMappings;
+        
         static MappingConfiguration()
         {
             // Explicit static constructor to tell C# compiler
@@ -58,8 +56,8 @@ namespace Cassandra.Mapping
         public MappingConfiguration()
         {
             _typeConverter = new DefaultTypeConverter();
-            _typeDefinitions = new LookupKeyedCollection<Type, ITypeDefinition>(td => td.PocoType);
-            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_typeDefinitions));
+            _tableMappings = new LookupKeyedCollection<Type, ITableMapping>(td => td.PocoType);
+            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_tableMappings));
             StatementFactory = new StatementFactory();
         }
 
@@ -79,14 +77,15 @@ namespace Cassandra.Mapping
         /// allows you to define mappings with a fluent interface.  Will throw if a mapping has already been defined for a
         /// given POCO Type.
         /// </summary>
-        public MappingConfiguration Define(params ITypeDefinition[] maps)
+        public MappingConfiguration Define(params ITableMapping[] maps)
         {
             if (maps == null) return this;
 
-            foreach (var typeDefinition in maps)
+            foreach (ITableMapping map in maps)
             {
-                _typeDefinitions.Add(typeDefinition);
+                _tableMappings.Add(map);
             }
+
             return this;
         }
 
@@ -100,9 +99,9 @@ namespace Cassandra.Mapping
 
             foreach (var mapping in mappings)
             {
-                foreach (var typeDefinition in mapping.Definitions)
+                foreach (ITableMapping tableMapping in mapping.TableMappings)
                 {
-                    _typeDefinitions.Add(typeDefinition);
+                    _tableMappings.Add(tableMapping);
                 }
             }
             return this;
@@ -116,9 +115,9 @@ namespace Cassandra.Mapping
             where T : Mappings, new()
         {
             var mappings = new T();
-            foreach (var map in mappings.Definitions)
+            foreach (var map in mappings.TableMappings)
             {
-                _typeDefinitions.Add(map);
+                _tableMappings.Add(map);
             }
             return this;
         }
@@ -137,8 +136,8 @@ namespace Cassandra.Mapping
         /// </summary>
         internal void Clear()
         {
-            _typeDefinitions = new LookupKeyedCollection<Type, ITypeDefinition>(td => td.PocoType);
-            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_typeDefinitions));
+            _tableMappings = new LookupKeyedCollection<Type, ITableMapping>(td => td.PocoType);
+            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_tableMappings));
             StatementFactory = new StatementFactory();
         }
     }

@@ -44,19 +44,19 @@ namespace Cassandra.Mapping
         {
         }
 
-        public static PocoColumn FromColumnDefinition(IColumnDefinition columnDefinition)
+        public static PocoColumn FromColumnMappingConfig(IColumnMappingConfig columnMappingConfig)
         {
             return new PocoColumn
             {
                 // Default the column name to the prop/field name if not specified
-                ColumnName = columnDefinition.ColumnName ?? columnDefinition.MemberInfo.Name,
+                ColumnName = columnMappingConfig.ColumnName ?? columnMappingConfig.MemberInfo.Name,
                 // Default the column type to the prop/field type if not specified
-                ColumnType = columnDefinition.ColumnType ?? columnDefinition.MemberInfoType,
-                MemberInfo = columnDefinition.MemberInfo,
-                MemberInfoType = columnDefinition.MemberInfoType,
-                SecondaryIndex = columnDefinition.SecondaryIndex,
-                IsCounter = columnDefinition.IsCounter,
-                IsStatic = columnDefinition.IsStatic
+                ColumnType = columnMappingConfig.ColumnType ?? columnMappingConfig.MemberInfoType,
+                MemberInfo = columnMappingConfig.MemberInfo,
+                MemberInfoType = columnMappingConfig.MemberInfoType,
+                SecondaryIndex = columnMappingConfig.SecondaryIndex,
+                IsCounter = columnMappingConfig.IsCounter,
+                IsStatic = columnMappingConfig.IsStatic
             };
         }
     }

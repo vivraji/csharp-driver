@@ -15,17 +15,17 @@ namespace Cassandra.Mapping
     {
         private const BindingFlags PublicInstanceBindingFlags = BindingFlags.Public | BindingFlags.Instance;
 
-        private readonly LookupKeyedCollection<Type, ITypeDefinition> _predefinedTypeDefinitions;
+        private readonly LookupKeyedCollection<Type, ITableMapping> _predefinedTableMappings;
         private readonly ConcurrentDictionary<Type, PocoData> _cache;
 
         /// <summary>
         /// Creates a new factory responsible of PocoData instances.
         /// </summary>
-        /// <param name="predefinedTypeDefinitions">Explicitly declared type definitions</param>
-        public PocoDataFactory(LookupKeyedCollection<Type, ITypeDefinition> predefinedTypeDefinitions)
+        /// <param name="predefinedTableMappings">Explicitly declared table mappings.</param>
+        public PocoDataFactory(LookupKeyedCollection<Type, ITableMapping> predefinedTableMappings)
         {
-            if (predefinedTypeDefinitions == null) throw new ArgumentNullException("predefinedTypeDefinitions");
-            _predefinedTypeDefinitions = predefinedTypeDefinitions;
+            if (predefinedTableMappings == null) throw new ArgumentNullException("predefinedTableMappings");
+            _predefinedTableMappings = predefinedTableMappings;
             _cache = new ConcurrentDictionary<Type, PocoData>();
         }
 
@@ -38,10 +38,10 @@ namespace Cassandra.Mapping
         /// Adds a definition to the local state in case no definition was explicitly defined.
         /// Used when the local default (AttributeBasedTypeDefinition) is not valid for a given type.
         /// </summary>
-        public void AddDefinitionDefault(Type type, Func<ITypeDefinition> definitionHandler)
+        public void AddDefinitionDefault(Type type, Func<ITableMapping> definitionHandler)
         {
             //In case there isn't already Poco information in the local cache.
-            if (_predefinedTypeDefinitions.Contains(type))
+            if (_predefinedTableMappings.Contains(type))
             {
                 return;
             }
@@ -51,39 +51,39 @@ namespace Cassandra.Mapping
         private PocoData CreatePocoData(Type pocoType)
         {
             // Try to get mapping from predefined collection, otherwise fallback to using attributes
-            ITypeDefinition typeDefinition;
-            if (_predefinedTypeDefinitions.TryGetItem(pocoType, out typeDefinition) == false)
+            ITableMapping typeMapping;
+            if (_predefinedTableMappings.TryGetItem(pocoType, out typeMapping) == false)
             {
-                typeDefinition = new AttributeBasedTypeDefinition(pocoType);
+                typeMapping = new AttributeBasedTypeDefinition(pocoType);
             }
-            return CreatePocoData(pocoType, typeDefinition);
+            return CreatePocoData(pocoType, typeMapping);
         }
 
-        private PocoData CreatePocoData(Type pocoType, ITypeDefinition typeDefinition)
+        private PocoData CreatePocoData(Type pocoType, ITableMapping typeMapping)
         {
+            // Create config and allow mapping to modify it
+            var tableConfig = new TableMappingConfig(pocoType);
+            typeMapping.ApplyTo(tableConfig);
+
             // Figure out the table name (if not specified, use the POCO class' name)
-            string tableName = typeDefinition.TableName ?? pocoType.Name;
+            string tableName = tableConfig.TableName ?? pocoType.Name;
 
             // Figure out the primary key columns (if not specified, assume a column called "id" is used)
-            var pkColumnNames = typeDefinition.PartitionKeys ?? new[] { "id" };
-
-            // Get column definitions for all mappable fields and properties
-            IEnumerable<IColumnDefinition> fieldsAndProperties = GetMappableFields(typeDefinition.PocoType)
-                .Select(typeDefinition.GetColumnDefinition)
-                .Union(GetMappableProperties(typeDefinition.PocoType).Select(typeDefinition.GetColumnDefinition));
-
-            // If explicit columns, only get column definitions that are explicitly defined, otherwise get all columns that aren't marked as Ignored
-            IEnumerable<IColumnDefinition> columnDefinitions = typeDefinition.ExplicitColumns
-                                                                   ? fieldsAndProperties.Where(c => c.IsExplicitlyDefined)
-                                                                   : fieldsAndProperties.Where(c => c.Ignore == false);
+            var pkColumnNames = tableConfig.PartitionKeys ?? new[] { "id" };
 
             // Create PocoColumn collection (where ordering is guaranteed to be consistent)
-            LookupKeyedCollection<string, PocoColumn> columns = columnDefinitions
-                .Select(PocoColumn.FromColumnDefinition)
-                .ToLookupKeyedCollection(pc => pc.ColumnName, StringComparer.OrdinalIgnoreCase);
+            Func<ColumnMappingConfig, bool> shouldIncludeColumn = tableConfig.ExplicitColumns
+                                                                      ? (Func<ColumnMappingConfig, bool>) (c => c.IsExplicitlyDefined)
+                                                                      : (c => c.Ignore == false);
 
-            var clusteringKeyNames = typeDefinition.ClusteringKeys ?? new Tuple<string, SortOrder>[0];
-            return new PocoData(pocoType, tableName, typeDefinition.KeyspaceName, columns, pkColumnNames, clusteringKeyNames, typeDefinition.CaseSensitive, typeDefinition.CompactStorage, typeDefinition.AllowFiltering);
+            LookupKeyedCollection<string, PocoColumn> columns = tableConfig.Columns.Where(shouldIncludeColumn)
+                                                                           .Select(PocoColumn.FromColumnMappingConfig)
+                                                                           .ToLookupKeyedCollection(pc => pc.ColumnName,
+                                                                                                    StringComparer.OrdinalIgnoreCase);
+            
+            var clusteringKeyNames = tableConfig.ClusteringKeys ?? new Tuple<string, SortOrder>[0];
+            return new PocoData(pocoType, tableName, tableConfig.KeyspaceName, columns, pkColumnNames, clusteringKeyNames, tableConfig.CaseSensitive,
+                                tableConfig.CompactStorage, tableConfig.AllowFiltering);
         }
 
         /// <summary>

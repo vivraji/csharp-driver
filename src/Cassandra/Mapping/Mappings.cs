@@ -9,14 +9,14 @@ namespace Cassandra.Mapping
     /// </summary>
     public abstract class Mappings
     {
-        internal LookupKeyedCollection<Type, ITypeDefinition> Definitions;
+        internal LookupKeyedCollection<Type, ITableMapping> TableMappings;
 
         /// <summary>
         /// Creates a new collection of mappings.  Inheritors should define all their mappings in the constructor of the sub-class.
         /// </summary>
         protected Mappings()
         {
-            Definitions = new LookupKeyedCollection<Type, ITypeDefinition>(td => td.PocoType);
+            TableMappings = new LookupKeyedCollection<Type, ITableMapping>(td => td.PocoType);
         }
 
         /// <summary>
@@ -24,11 +24,11 @@ namespace Cassandra.Mapping
         /// </summary>
         public Map<TPoco> For<TPoco>()
         {
-            ITypeDefinition map;
-            if (Definitions.TryGetItem(typeof (TPoco), out map) == false)
+            ITableMapping map;
+            if (TableMappings.TryGetItem(typeof (TPoco), out map) == false)
             {
                 map = new Map<TPoco>();
-                Definitions.Add(map);
+                TableMappings.Add(map);
             }
 
             return (Map<TPoco>) map;
