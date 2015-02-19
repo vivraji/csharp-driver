@@ -55,8 +55,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_Ignore_TableCreatedWithMappingAttributes()
         {
-            var definition = new AttributeBasedTypeDefinition(typeof(PocoWithIgnoredAttributes));
-            var table = new Table<PocoWithIgnoredAttributes>(_session, new MappingConfiguration().Define(definition)); 
+            var table = new Table<PocoWithIgnoredAttributes>(_session, new MappingConfiguration()); 
             Assert.AreNotEqual(table.Name, table.Name.ToLower());
             table.Create();
 
@@ -140,11 +139,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_Ignore_LinqAndMappingAttributes()
         {
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(
-                typeof(PocoWithIgnrdAttr_LinqAndMapping), 
-                () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithIgnrdAttr_LinqAndMapping)));
-            var table = new Table<PocoWithIgnrdAttr_LinqAndMapping>(_session, config);
+            var table = new Table<PocoWithIgnrdAttr_LinqAndMapping>(_session, new MappingConfiguration());
             table.Create();
 
             var cqlClient = GetMapper();
@@ -199,11 +194,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_PartitionKey_ValueNull_LinqAndMappingAttributes()
         {
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(
-                typeof(PocoWithIgnrdAttr_LinqAndMapping),
-                () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithIgnrdAttr_LinqAndMapping)));
-            var table = new Table<PocoWithIgnrdAttr_LinqAndMapping>(_session, config);
+            var table = new Table<PocoWithIgnrdAttr_LinqAndMapping>(_session, new MappingConfiguration());
             table.Create();
 
             var cqlClient = GetMapper();
@@ -223,11 +214,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         public void Attributes_PartitionKey_OnWrongField()
         {
             // Create table using Linq -- includes partition key that is not assigned by the mapping attribute
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(
-                typeof(PocoWithWrongFieldLabeledPk),
-                () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithWrongFieldLabeledPk)));
-            var table = new Table<PocoWithWrongFieldLabeledPk>(_session, config);
+            var table = new Table<PocoWithWrongFieldLabeledPk>(_session, new MappingConfiguration());
             table.Create();
 
             string cqlSelectAll = "SELECT * from " + table.Name;
@@ -404,13 +391,12 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_CompositeKey()
         {
-            var definition = new AttributeBasedTypeDefinition(typeof(PocoWithCompositeKey));
-            var table = new Table<PocoWithCompositeKey>(_session, new MappingConfiguration().Define(definition));
+            var table = new Table<PocoWithCompositeKey>(_session, new MappingConfiguration());
             table.Create();
 
             List<Guid> listOfGuids = new List<Guid>() { new Guid(), new Guid() };
 
-            var mapper = new Mapper(_session, new MappingConfiguration().Define(definition));
+            var mapper = new Mapper(_session, new MappingConfiguration());
             PocoWithCompositeKey pocoWithCustomAttributes = new PocoWithCompositeKey
             {
                 ListOfGuids = listOfGuids,
@@ -446,9 +432,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_CompositeKey_FirstPartOfKeyNull()
         {
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(PocoWithCompositeKey), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithCompositeKey)));
-            var table = new Table<PocoWithCompositeKey>(_session, config);
+            var table = new Table<PocoWithCompositeKey>(_session, new MappingConfiguration());
             table.Create();
             List<Guid> listOfGuids = new List<Guid>() { new Guid(), new Guid() };
 
@@ -471,9 +455,7 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_CompositeKey_AllFieldsNull()
         {
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(PocoWithCompositeKey), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithCompositeKey)));
-            var table = new Table<PocoWithCompositeKey>(_session, config);
+            var table = new Table<PocoWithCompositeKey>(_session, new MappingConfiguration());
             table.Create();
             List<Guid> listOfGuids = new List<Guid>() { new Guid(), new Guid() };
 
@@ -496,12 +478,10 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test]
         public void Attributes_MultipleClusteringKeys()
         {
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(PocoWithClusteringKeys), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(PocoWithClusteringKeys)));
-            var table = new Table<PocoWithClusteringKeys>(_session, config);
+            var table = new Table<PocoWithClusteringKeys>(_session, new MappingConfiguration());
             table.Create();
 
-            var cqlClient = new Mapper(_session, config);
+            var cqlClient = new Mapper(_session, new MappingConfiguration());
 ;
             PocoWithClusteringKeys pocoWithCustomAttributes = new PocoWithClusteringKeys
             {
@@ -602,13 +582,12 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         {
             // Setup
             int expectedTotalRecords = 1;
-            var definition = new AttributeBasedTypeDefinition(typeof(SimplePocoWithColumnAttribute));
-            var table = new Table<SimplePocoWithColumnAttribute>(_session, new MappingConfiguration().Define(definition));
+            var table = new Table<SimplePocoWithColumnAttribute>(_session, new MappingConfiguration());
             Assert.AreNotEqual(table.Name, table.Name.ToLower());
             table.Create();
 
             SimplePocoWithColumnAttribute defaultInstance = new SimplePocoWithColumnAttribute();
-            var mapper = new Mapper(_session, new MappingConfiguration().Define(definition));
+            var mapper = new Mapper(_session, new MappingConfiguration());
             mapper.Insert(defaultInstance);
 
             // Validate using mapped Fetch
@@ -635,14 +614,13 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         {
             // Setup
             int expectedTotalRecords = 1;
-            var definition = new AttributeBasedTypeDefinition(typeof(SimplePocoWithColumnLabel_CustomColumnName));
-            var table = new Table<SimplePocoWithColumnLabel_CustomColumnName>(_session, new MappingConfiguration().Define(definition));
+            var table = new Table<SimplePocoWithColumnLabel_CustomColumnName>(_session, new MappingConfiguration());
             Assert.AreEqual(typeof(SimplePocoWithColumnLabel_CustomColumnName).Name, table.Name); // Assert table name is case sensitive now
             Assert.AreNotEqual(typeof(SimplePocoWithColumnLabel_CustomColumnName).Name, typeof(SimplePocoWithColumnLabel_CustomColumnName).Name.ToLower()); // Assert table name is case senstive
             table.Create();
 
             SimplePocoWithColumnLabel_CustomColumnName defaultInstance = new SimplePocoWithColumnLabel_CustomColumnName();
-            var mapper = new Mapper(_session, new MappingConfiguration().Define(definition));
+            var mapper = new Mapper(_session, new MappingConfiguration());
             mapper.Insert(defaultInstance);
 
             // Validate using mapped Fetch

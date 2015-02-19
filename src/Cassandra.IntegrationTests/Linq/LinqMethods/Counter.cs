@@ -37,8 +37,6 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
         {
             //var mapping = new Map<PocoWithCounter>();
             var mappingConfig = new MappingConfiguration();
-            mappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(CounterEntityWithLinqAttributes),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(CounterEntityWithLinqAttributes)));
             var table = new Table<CounterEntityWithLinqAttributes>(_session, mappingConfig);
             table.Create();
 
@@ -206,8 +204,6 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
         {
             //var mapping = new Map<PocoWithCounter>();
             var mappingConfig = new MappingConfiguration();
-            mappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(CounterEntityWithLinqAttributes),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(CounterEntityWithLinqAttributes)));
             var table = new Table<CounterEntityWithLinqAttributes>(_session, mappingConfig);
             table.Create();
 
@@ -258,8 +254,6 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
         {
             // Create config that uses linq based attributes
             var mappingConfig = new MappingConfiguration();
-            mappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(CounterEntityWithLinqAttributes),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(CounterEntityWithLinqAttributes)));
             var table = new Table<CounterEntityWithLinqAttributes>(_session, mappingConfig);
             table.Create();
 

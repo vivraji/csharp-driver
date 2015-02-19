@@ -1,6 +1,7 @@
 ﻿using System;
 using Cassandra.Mapping;
 using Cassandra.Mapping.Attributes;
+using Cassandra.Mapping.Config;
 using Cassandra.Tests.Mapping.Pocos;
 using NUnit.Framework;
 
@@ -14,9 +15,8 @@ namespace Cassandra.Tests.Mapping
         {
             //Non decorated Poco
             var tableConfig = new TableMappingConfig(typeof (AllTypesEntity));
-            var definition = new AttributeBasedTypeDefinition(typeof (AllTypesEntity));
-            definition.ApplyTo(tableConfig);
-
+            AttributeBasedTypeDefinition.ApplyTo(tableConfig);
+            
             Assert.False(tableConfig.CaseSensitive);
             Assert.False(tableConfig.CompactStorage);
             Assert.False(tableConfig.AllowFiltering);
@@ -25,16 +25,15 @@ namespace Cassandra.Tests.Mapping
             Assert.AreEqual(0, tableConfig.PartitionKeys.Count);
             Assert.Null(tableConfig.KeyspaceName);
             Assert.AreEqual("AllTypesEntity", tableConfig.TableName);
-            Assert.AreEqual(typeof(AllTypesEntity), definition.PocoType);
+            Assert.AreEqual(typeof(AllTypesEntity), tableConfig.PocoType);
         }
 
         [Test]
         public void AttributeBased_Single_PartitionKey_Test()
         {
             var tableConfig = new TableMappingConfig(typeof (DecoratedUser));
-            var definition = new AttributeBasedTypeDefinition(typeof (DecoratedUser));
-            definition.ApplyTo(tableConfig);
-
+            AttributeBasedTypeDefinition.ApplyTo(tableConfig);
+            
             Assert.False(tableConfig.CaseSensitive);
             Assert.False(tableConfig.CompactStorage);
             Assert.False(tableConfig.AllowFiltering);
@@ -47,8 +46,7 @@ namespace Cassandra.Tests.Mapping
         public void AttributeBased_Composite_PartitionKey_Test()
         {
             var tableConfig = new TableMappingConfig(typeof (DecoratedTimeSeries));
-            var definition = new AttributeBasedTypeDefinition(typeof (DecoratedTimeSeries));
-            definition.ApplyTo(tableConfig);
+            AttributeBasedTypeDefinition.ApplyTo(tableConfig);
 
             Assert.True(tableConfig.CaseSensitive);
             Assert.False(tableConfig.CompactStorage);

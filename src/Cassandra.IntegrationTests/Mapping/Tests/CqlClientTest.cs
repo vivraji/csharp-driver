@@ -38,14 +38,12 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         public void CqlClient_TwoInstancesBasedOnSameSession()
         {
             // Setup
-            MappingConfiguration config1 = new MappingConfiguration();
-            config1.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(Poco1), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(Poco1)));
+            var config1 = new MappingConfiguration();
             var table1 = new Table<Poco1>(_session, config1);
             table1.Create();
             string cqlSelectAll1 = "SELECT * from " + table1.Name;
 
-            MappingConfiguration config2 = new MappingConfiguration();
-            config2.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(Poco2), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(Poco2)));
+            var config2 = new MappingConfiguration();
             var table2 = new Table<Poco2>(_session, config2);
             table2.Create();
             string cqlSelectAll2 = "SELECT * from " + table2.Name;

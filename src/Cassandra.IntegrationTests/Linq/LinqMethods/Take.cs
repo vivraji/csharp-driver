@@ -44,8 +44,6 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
 
             // drop table if exists, re-create
             _movieMappingConfig = new MappingConfiguration();
-            _movieMappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(Movie),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(Movie)));
             _movieTable = new Table<Movie>(_session, _movieMappingConfig);
             _movieTable.Create();
 

@@ -344,8 +344,9 @@ namespace Cassandra.Tests.Mapping.Linq
                 .Setup(s => s.Execute(It.IsAny<string>()))
                 .Returns(() => new RowSet())
                 .Callback<string>(q => createQuery = q);
-            var definition = new Cassandra.Mapping.Attributes.AttributeBasedTypeDefinition(typeof(DecoratedTimeSeries));
-            var table = GetTable<DecoratedTimeSeries>(sessionMock.Object, definition);
+            
+            // Should use regular attribute-based mapping
+            var table = new Table<DecoratedTimeSeries>(sessionMock.Object);
             table.Create();
             //It contains Ignored props: Ignored1 and Ignored2
             Assert.AreEqual(@"CREATE TABLE ""ks1"".""tbl1"" (""name"" text, ""Slice"" int, ""Time"" timeuuid, ""val"" double, ""Value2"" text, PRIMARY KEY ((""name"", ""Slice""), ""Time""))", createQuery);

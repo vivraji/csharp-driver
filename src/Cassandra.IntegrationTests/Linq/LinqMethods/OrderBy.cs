@@ -26,9 +26,7 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
             _session.ChangeKeyspace(_uniqueKsName);
 
             // drop table if exists, re-create
-            MappingConfiguration movieMappingConfig = new MappingConfiguration();
-            movieMappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(Movie),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(Movie)));
+            var movieMappingConfig = new MappingConfiguration();
             _movieTable = new Table<Movie>(_session, movieMappingConfig);
             _movieTable.Create();
 

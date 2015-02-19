@@ -35,10 +35,9 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test, Category("short")]
         public void Counter_Success()
         {
-            var config = new AttributeBasedTypeDefinition(typeof(PocoWithCounterAttribute));
-            var table = new Table<PocoWithCounterAttribute>(_session, new MappingConfiguration().Define(config));
+            var table = new Table<PocoWithCounterAttribute>(_session, new MappingConfiguration());
             table.Create();
-            var cqlClient = new Mapper(_session, new MappingConfiguration().Define(config));
+            var cqlClient = new Mapper(_session, new MappingConfiguration());
 
             List<PocoWithCounterAttribute> counterPocos = new List<PocoWithCounterAttribute>();
             for (int i = 0; i < 10; i++)
@@ -85,10 +84,9 @@ namespace Cassandra.IntegrationTests.Mapping.Tests
         [Test, Category("long")]
         public void Counter_LinqAttributes_Parallel()
         {
-            var config = new Cassandra.Mapping.Attributes.AttributeBasedTypeDefinition(typeof(PocoWithCounterAttribute));
-            var table = new Table<PocoWithCounterAttribute>(_session, new MappingConfiguration().Define(config));
+            var table = new Table<PocoWithCounterAttribute>(_session, new MappingConfiguration());
             table.Create();
-            var cqlClient = new Mapper(_session, new MappingConfiguration().Define(config));
+            var cqlClient = new Mapper(_session, new MappingConfiguration());
 
             List<PocoWithCounterAttribute> counterPocos = new List<PocoWithCounterAttribute>();
             for (int i = 0; i < 100; i++)

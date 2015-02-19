@@ -27,9 +27,7 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
             _session.ChangeKeyspace(_uniqueKsName);
 
             // drop table if exists, re-create
-            MappingConfiguration movieMappingConfig = new MappingConfiguration();
-            movieMappingConfig.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(Movie),
-                 () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(Movie)));
+            var movieMappingConfig = new MappingConfiguration();
             _movieTable = new Table<Movie>(_session, movieMappingConfig);
             _movieTable.Create();
 
@@ -150,9 +148,7 @@ namespace Cassandra.IntegrationTests.Linq.LinqMethods
             int date = 2;
             long time = 3;
 
-            MappingConfiguration config = new MappingConfiguration();
-            config.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(TestTable), () => LinqAttributeBasedTypeDefinition.DetermineAttributes(typeof(TestTable)));
-            Table<TestTable> table = new Table<TestTable>(_session, config);
+            var table = new Table<TestTable>(_session, new MappingConfiguration());
             table.CreateIfNotExists();
 
             table.Insert(new TestTable { UserId = 1, Date = 2, TimeColumn = 1 }).Execute();
