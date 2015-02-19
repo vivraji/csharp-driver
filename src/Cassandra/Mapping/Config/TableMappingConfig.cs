@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace Cassandra.Mapping
+namespace Cassandra.Mapping.Config
 {
     /// <summary>
     /// Represents mutable configuration about how to map a POCO/Type to a table in C*.

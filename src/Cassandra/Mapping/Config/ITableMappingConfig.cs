@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Cassandra.Mapping
+namespace Cassandra.Mapping.Config
 {
     /// <summary>
     /// The configuration for how to map a POCO to a table in Cassandra.  Can be inspected or modified.

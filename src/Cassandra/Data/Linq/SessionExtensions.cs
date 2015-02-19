@@ -38,10 +38,9 @@ namespace Cassandra.Data.Linq
         {
             //Use Linq defaults if no definition has been set for this types
             //Linq attributes are marked as Obsolete
-            #pragma warning disable 612
-            MappingConfiguration.Global.MapperFactory.PocoDataFactory.AddDefinitionDefault(typeof(TEntity),
-                () => new LinqAttributeBasedTypeDefinition(typeof (TEntity), tableName, keyspaceName));
-            #pragma warning restore 612
+            #pragma warning disable 618
+            MappingConfiguration.Global.IsUsingLegacyLinqApi(typeof (TEntity), keyspaceName, tableName);
+            #pragma warning restore 618
             var config = MappingConfiguration.Global;
             return new Table<TEntity>(session, config, tableName, keyspaceName);
         }

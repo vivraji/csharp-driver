@@ -2,34 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Cassandra.Mapping.Config;
 
 namespace Cassandra.Mapping.Attributes
 {
     /// <summary>
     /// A type definition that uses attributes on the class to determine its settings.
     /// </summary>
-    internal class AttributeBasedTypeDefinition : ITableMapping
+    internal static class AttributeBasedTypeDefinition
     {
-        public Type PocoType { get; private set; }
-
-        /// <summary>
-        /// Creates a new TypeDefinition for the POCO Type specified using any attributes on the class to determine mappings.
-        /// </summary>
-        public AttributeBasedTypeDefinition(Type type)
+        public static void ApplyTo(ITableMappingConfig tableConfig)
         {
-            if (type == null)
-            {
-                throw new ArgumentNullException("type");
-            }
-            PocoType = type;
-        }
-
-        public void ApplyTo(ITableMappingConfig tableConfig)
-        {
-            tableConfig.TableName = PocoType.Name;
+            tableConfig.TableName = tableConfig.PocoType.Name;
 
             //Get the table name from the attribute or the type name
-            var tableAttribute = (TableAttribute) PocoType.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault();
+            var tableAttribute = (TableAttribute) tableConfig.PocoType.GetCustomAttributes(typeof(TableAttribute), true).FirstOrDefault();
             if (tableAttribute != null)
             {
                 tableConfig.TableName = tableAttribute.Name;

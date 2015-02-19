@@ -1,4 +1,5 @@
 ﻿using System;
+using Cassandra.Mapping.Config;
 
 namespace Cassandra.Mapping
 {

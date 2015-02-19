@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Cassandra.Mapping
+namespace Cassandra.Mapping.Config
 {
     /// <summary>
     /// The configuration for how to map a property/field on a POCO to a column in Cassandra.  Can be

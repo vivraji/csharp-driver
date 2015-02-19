@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using Cassandra.Mapping.Config;
 using Cassandra.Mapping.Statements;
 using Cassandra.Mapping.TypeConversion;
-using Cassandra.Mapping.Utils;
 
 namespace Cassandra.Mapping
 {
@@ -14,8 +15,9 @@ namespace Cassandra.Mapping
         /// Instance to be used for global mappings. It won't get initialized until the first use.
         /// </summary>
         private static readonly MappingConfiguration GlobalInstance = new MappingConfiguration();
+
         private TypeConverter _typeConverter;
-        private LookupKeyedCollection<Type, ITableMapping> _tableMappings;
+        private ApplyMappingOrAttribtuesContributor _mappingContributor;
         
         static MappingConfiguration()
         {
@@ -56,8 +58,15 @@ namespace Cassandra.Mapping
         public MappingConfiguration()
         {
             _typeConverter = new DefaultTypeConverter();
-            _tableMappings = new LookupKeyedCollection<Type, ITableMapping>(td => td.PocoType);
-            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_tableMappings));
+            _mappingContributor = new ApplyMappingOrAttribtuesContributor();
+
+            // The pipeline (in order) for configuration changes when PocoData objects are created
+            var configPipeline = new List<ITableMappingConfigContributor>()
+            {
+                _mappingContributor
+            };
+
+            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(configPipeline));
             StatementFactory = new StatementFactory();
         }
 
@@ -81,11 +90,7 @@ namespace Cassandra.Mapping
         {
             if (maps == null) return this;
 
-            foreach (ITableMapping map in maps)
-            {
-                _tableMappings.Add(map);
-            }
-
+            _mappingContributor.AddTableMappings(maps);
             return this;
         }
 
@@ -97,12 +102,9 @@ namespace Cassandra.Mapping
         {
             if (mappings == null) return this;
 
-            foreach (var mapping in mappings)
+            foreach (Mappings mapping in mappings)
             {
-                foreach (ITableMapping tableMapping in mapping.TableMappings)
-                {
-                    _tableMappings.Add(tableMapping);
-                }
+                _mappingContributor.AddTableMappings(mapping.TableMappings);
             }
             return this;
         }
@@ -115,10 +117,7 @@ namespace Cassandra.Mapping
             where T : Mappings, new()
         {
             var mappings = new T();
-            foreach (var map in mappings.TableMappings)
-            {
-                _tableMappings.Add(map);
-            }
+            _mappingContributor.AddTableMappings(mappings.TableMappings);
             return this;
         }
 
@@ -136,9 +135,28 @@ namespace Cassandra.Mapping
         /// </summary>
         internal void Clear()
         {
-            _tableMappings = new LookupKeyedCollection<Type, ITableMapping>(td => td.PocoType);
-            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(_tableMappings));
+            _mappingContributor = new ApplyMappingOrAttribtuesContributor();
+
+            // The pipeline (in order) for configuration changes when PocoData objects are created
+            var configPipeline = new List<ITableMappingConfigContributor>()
+            {
+                _mappingContributor
+            };
+
+            MapperFactory = new MapperFactory(_typeConverter, new PocoDataFactory(configPipeline));
             StatementFactory = new StatementFactory();
+        }
+
+        [Obsolete("Can be removed when legacy LINQ attributes are removed.")]
+        internal void MayBeUsingLegacyLinqApi(Type pocoType)
+        {
+            _mappingContributor.MayBeUsingLegacyLinqApi(pocoType);
+        }
+
+        [Obsolete("Can be removed when legacy LINQ attribute are removed.")]
+        internal void IsUsingLegacyLinqApi(Type pocoType, string keyspaceName, string tableName)
+        {
+            _mappingContributor.IsUsingLegacyLinqApi(pocoType, keyspaceName, tableName);
         }
     }
 }

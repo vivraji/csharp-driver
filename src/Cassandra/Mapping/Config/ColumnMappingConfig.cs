@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Cassandra.Mapping
+namespace Cassandra.Mapping.Config
 {
     /// <summary>
     /// Represents mutable configuration about how to map a property/field to a column in C*.
