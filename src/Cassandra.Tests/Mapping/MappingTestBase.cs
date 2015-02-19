@@ -62,11 +62,11 @@ namespace Cassandra.Tests.Mapping
         }
 
         /// <summary>
-        /// Gets a IQueryProvider with a new mapping configuration containing the definition provided
+        /// Gets a IQueryProvider with a new mapping configuration containing the mapping provided
         /// </summary>
-        protected Table<T> GetTable<T>(ISession session, ITypeDefinition definition)
+        protected Table<T> GetTable<T>(ISession session, ITableMapping mapping)
         {
-            return new Table<T>(session, new MappingConfiguration().Define(definition));
+            return new Table<T>(session, new MappingConfiguration().Define(mapping));
         }
 
         /// <summary>
