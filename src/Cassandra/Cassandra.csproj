@@ -173,9 +173,14 @@
     <Compile Include="Mapping\Attributes\CounterAttribute.cs" />
     <Compile Include="Mapping\Attributes\SecondaryIndexAttribute.cs" />
     <Compile Include="Mapping\Attributes\StaticColumnAttribute.cs" />
+    <Compile Include="Mapping\Config\ApplyConventionsContributor.cs" />
     <Compile Include="Mapping\Config\ApplyMappingOrAttribtuesContributor.cs" />
     <Compile Include="Mapping\Config\ColumnMappingConfig.cs" />
     <Compile Include="Mapping\Config\ITableMappingConfigContributor.cs" />
+    <Compile Include="Mapping\Conventions\ColumnNamingConvention.cs" />
+    <Compile Include="Mapping\Conventions\ITableMappingConvention.cs" />
+    <Compile Include="Mapping\Conventions\NameConverters.cs" />
+    <Compile Include="Mapping\Conventions\TableNamingConvention.cs" />
     <Compile Include="Mapping\Cql.cs" />
     <Compile Include="Mapping\CqlBatch.cs" />
     <Compile Include="Mapping\Config\IColumnMappingConfig.cs" />

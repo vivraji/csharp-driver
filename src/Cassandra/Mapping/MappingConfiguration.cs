@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Cassandra.Mapping.Config;
+using Cassandra.Mapping.Conventions;
 using Cassandra.Mapping.Statements;
 using Cassandra.Mapping.TypeConversion;
 
@@ -17,8 +18,9 @@ namespace Cassandra.Mapping
         private static readonly MappingConfiguration GlobalInstance = new MappingConfiguration();
 
         private TypeConverter _typeConverter;
+        private ApplyConventionsContributor _conventionsContributor;
         private ApplyMappingOrAttribtuesContributor _mappingContributor;
-        
+
         static MappingConfiguration()
         {
             // Explicit static constructor to tell C# compiler
@@ -58,11 +60,13 @@ namespace Cassandra.Mapping
         public MappingConfiguration()
         {
             _typeConverter = new DefaultTypeConverter();
+            _conventionsContributor = new ApplyConventionsContributor();
             _mappingContributor = new ApplyMappingOrAttribtuesContributor();
-
+            
             // The pipeline (in order) for configuration changes when PocoData objects are created
             var configPipeline = new List<ITableMappingConfigContributor>()
             {
+                _conventionsContributor,
                 _mappingContributor
             };
 
@@ -131,15 +135,33 @@ namespace Cassandra.Mapping
         }
 
         /// <summary>
+        /// Adds conventions for mapping between tables and columns in C* and POCOs.  Conventions are applied
+        /// in the order they are added and are run before any type-specific mappings are applied (whether
+        /// the type-specific mappings are configured via the fluent interface or via attributes).
+        /// </summary>
+        public MappingConfiguration AddConventions(params ITableMappingConvention[] conventions)
+        {
+            if (conventions == null) return this;
+
+            foreach(ITableMappingConvention convention in conventions)
+                _conventionsContributor.AddConvention(convention);
+
+            return this;
+        }
+
+
+        /// <summary>
         /// Clears all the mapping defined for this instance
         /// </summary>
         internal void Clear()
         {
+            _conventionsContributor = new ApplyConventionsContributor();
             _mappingContributor = new ApplyMappingOrAttribtuesContributor();
-
+            
             // The pipeline (in order) for configuration changes when PocoData objects are created
             var configPipeline = new List<ITableMappingConfigContributor>()
             {
+                _conventionsContributor,
                 _mappingContributor
             };
 
