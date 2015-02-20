@@ -63,7 +63,7 @@ namespace Cassandra.Mapping.Config
 
         public bool CompactStorage { get; set; }
 
-        // TODO: Exposed internally only?
+        // This is only exposed internally (i.e. not by the ITableMappingConfig interface)
         public bool AllowFiltering { get; set; }
 
         IEnumerable<IColumnMappingConfig> ITableMappingConfig.Columns

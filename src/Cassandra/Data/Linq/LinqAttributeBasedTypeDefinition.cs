@@ -14,7 +14,7 @@ namespace Cassandra.Data.Linq
     [Obsolete]
     internal static class LinqAttributeBasedTypeDefinition
     {
-        public static void ApplyTo(ITableMappingConfig tableConfig, string keyspaceName, string tableName)
+        public static void ApplyTo(TableMappingConfig tableConfig, string keyspaceName, string tableName)
         {
             // Some legacy LINQ defaults
             tableConfig.CaseSensitive = true;

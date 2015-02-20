@@ -49,9 +49,6 @@ namespace Cassandra.Mapping.Config
         /// </summary>
         bool CompactStorage { get; set; }
 
-        // TODO: Only expose this internally for backwards compatibility
-        bool AllowFiltering { get; set; }
-
         /// <summary>
         /// A read-only collection of column configurations for this POCO.  The individual column configurations
         /// can be inspected/modified, but the collection itself cannot be changed.

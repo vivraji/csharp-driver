@@ -11,7 +11,7 @@ namespace Cassandra.Mapping.Attributes
     /// </summary>
     internal static class AttributeBasedTypeDefinition
     {
-        public static void ApplyTo(ITableMappingConfig tableConfig)
+        public static void ApplyTo(TableMappingConfig tableConfig)
         {
             tableConfig.TableName = tableConfig.PocoType.Name;
 
